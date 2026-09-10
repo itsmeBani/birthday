@@ -16,14 +16,6 @@
   z-index: 1;
 }
 
-/* While a photo card is open, its 3D backdrop needs to sit above the DOM header/song
-   button — a plain canvas always renders below positioned DOM siblings regardless of what's
-   centered in 3D space, so bump the whole canvas above them (the backdrop already dims
-   everything else in the scene, so nothing looks wrong underneath). */
-.stage[data-photo-open='true'] canvas {
-  z-index: 5;
-}
-
 .header {
   position: absolute;
   inset: 0 0 auto 0;
@@ -36,6 +28,17 @@
   text-align: center;
   background: var(--scrim);
   pointer-events: none;
+  filter: blur(0px);
+  opacity: 1;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+/* While a photo card is open, keep the header visible but put it "on hold" the same way the
+   3D backdrop dims the rest of the scene — blurred and dimmed rather than hidden, so it still
+   reads as a headline sitting behind the featured card instead of vanishing. */
+.stage[data-photo-open='true'] .header {
+  filter: blur(3px);
+  opacity: 0.55;
 }
 
 .eyebrow {
@@ -260,6 +263,68 @@
   }
 }
 
+/* Fired when a gift/envelope/photo is opened — deliberately distinct from the big page-load
+   shower: a small pop that originates from the opened object's spot and fades out mid-fall,
+   instead of a full-viewport curtain of confetti falling from the top. */
+.confetti-burst {
+  position: absolute;
+  left: var(--bx);
+  top: var(--by);
+  width: 0;
+  height: 0;
+  z-index: 11;
+  pointer-events: none;
+}
+
+.confetto-burst {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: calc(var(--w) * 0.4);
+  background: var(--c);
+  border-radius: 1px;
+  opacity: 0;
+  animation: confetti-burst var(--dur) cubic-bezier(0.16, 0.8, 0.3, 1) var(--delay) forwards;
+}
+
+.confetto-burst[data-shape='circle'] {
+  border-radius: 50%;
+  height: var(--w);
+}
+
+.confetto-burst[data-shape='triangle'] {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-radius: 0;
+  border-left: calc(var(--w) * 0.5) solid transparent;
+  border-right: calc(var(--w) * 0.5) solid transparent;
+  border-bottom: calc(var(--w) * 0.85) solid var(--c);
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(calc(var(--tx) * 0.3), -14vh) scale(1) rotate(calc(var(--spin) * 0.3));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), 45vh) scale(0.75) rotate(var(--spin));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetto-burst {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -276,12 +341,14 @@
 .modal-card {
   position: relative;
   width: 100%;
-  max-width: 420px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 40px 32px 32px;
-  box-shadow: var(--shadow);
+  max-width: 390px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid rgba(30, 38, 25, 0.08);
+  border-radius: 26px;
+  padding: 16px;
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.28);
   text-align: center;
   animation: modal-fly-in 0.65s cubic-bezier(0.22, 0.75, 0.24, 1);
 }
@@ -315,17 +382,18 @@
 }
 
 .modal-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+  position: sticky;
+  float: right;
+  top: 0;
+  z-index: 1;
   appearance: none;
   border: none;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: 20px;
+  background: #f5f4f1;
+  color: #6d716b;
+  font-size: 22px;
   line-height: 1;
   cursor: pointer;
 }
@@ -347,16 +415,186 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--matcha-600);
-  margin-bottom: 14px;
+  margin: 26px 0 14px;
+}
+
+.modal-eyebrow-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #078144;
+  background: #e1f7e9;
+  border-radius: 999px;
+  padding: 6px 12px 6px 10px;
+  margin: 0 0 16px;
+}
+
+.modal-product {
+  display: flex;
+  min-height: 210px;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 18px;
+  background: white;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.modal-product > span {
+  padding: 0 16px 14px;
+  color: #777973;
+  font-size: 12px;
+}
+
+.modal-gift-image {
+  display: block;
+  width: 100%;
+  max-height: 185px;
+  object-fit: contain;
 }
 
 .modal-body {
-  font-family: var(--display);
-  font-style: italic;
-  font-size: 22px;
-  line-height: 145%;
-  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #20231f;
   text-wrap: balance;
+}
+
+.modal-product + .modal-body + .modal-sender-note,
+.modal-body + .modal-sender-note {
+  margin-top: 14px;
+}
+
+.modal-sender-note {
+  display: flex;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 16px;
+  background: #f5f4f1;
+  text-align: left;
+}
+
+.modal-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1670b8;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.modal-sender-note p {
+  color: #222520;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.modal-sender-note small {
+  display: block;
+  margin-bottom: 2px;
+  color: #787b75;
+  font-size: 11px;
+}
+
+.modal-order-details {
+  margin: 10px 0 0;
+  padding: 6px 14px;
+  border: 1px solid #ecece7;
+  border-radius: 16px;
+  text-align: left;
+}
+
+.modal-order-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 9px 0;
+  font-size: 12px;
+}
+
+.modal-order-details div + div { border-top: 1px solid #ededeb; }
+.modal-order-details dt { color: #73766f; }
+.modal-order-details dd { margin: 0; color: #242723; font-weight: 700; }
+
+.modal-delivery-badge {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px 10px;
+  border-radius: 14px;
+  background: #e0f9e9;
+  text-align: left;
+}
+
+.modal-delivery-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: #078144;
+}
+
+.modal-delivery-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: #078144;
+}
+
+.modal-delivery-text strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: #078144;
+}
+
+.modal-delivery-text b { font-size: 12px; font-weight: 700; }
+
+.modal-delivery-progress {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 10px;
+  margin: 3px 4px 0;
+  background: linear-gradient(#10a552, #10a552) left center / 67% 2px no-repeat, #b7e8ca;
+}
+
+.modal-delivery-progress span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #11aa55;
+}
+
+.modal-delivery-progress span:last-child { background: #b7e8ca; }
+
+.modal-delivery-steps {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  color: #078144;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .modal-sign {

@@ -667,7 +667,13 @@ const PHOTO_ORBIT_TARGET = new THREE.Vector3(0, 0.5, 0)
 const PHOTO_FEATURED_DISTANCE_FACTOR = 0.4
 const PHOTO_BACKDROP_DISTANCE_FACTOR = 0.55
 const PHOTO_CARD_GROUP_Y = -0.65
-const PHOTO_FEATURED_SCALE = 1.7
+// A fixed scale multiplier only looks right at the zoom level it was tuned for — since
+// featuredDistance is itself proportional to the camera's current zoom, the frustum's actual
+// height at that depth shrinks right along with it when the user has zoomed in, so a fixed
+// scale can outgrow the visible frame and get clipped top/bottom. Instead the open card is
+// sized as a fraction of whatever's actually visible at its distance, every frame.
+const PHOTO_CARD_BASE_HEIGHT = 0.62
+const PHOTO_FEATURED_FILL_FRACTION = 0.62
 
 // Reused scratch objects (billboarding runs every frame for every open card/backdrop; these
 // avoid allocating a new Vector3/Quaternion each time).
@@ -678,7 +684,7 @@ const _billboardQuat = new THREE.Quaternion()
 // below — so afterwards the face ends up pointing straight back at the camera.
 const _faceUpToForward = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)
 
-function PhotoCard({
+function  PhotoCard({
   position,
   rotationY = 0,
   scale = 1,
@@ -738,7 +744,10 @@ function PhotoCard({
       // trailing behind for a moment if the user orbits while a card is open.
       _billboardQuat.copy(camera.quaternion).multiply(_faceUpToForward)
       g.quaternion.copy(_billboardQuat)
-      g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, PHOTO_FEATURED_SCALE, 0.2))
+      const fovRad = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov)
+      const frustumHeightAtCard = 2 * featuredDistance * Math.tan(fovRad / 2)
+      const targetScale = (frustumHeightAtCard * PHOTO_FEATURED_FILL_FRACTION) / (PHOTO_CARD_BASE_HEIGHT * scale)
+      g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, targetScale, 0.2))
     } else {
       g.position.x = THREE.MathUtils.lerp(g.position.x, 0, 0.12)
       g.position.y = THREE.MathUtils.lerp(g.position.y, 0, 0.12)
@@ -767,15 +776,29 @@ function PhotoCard({
         document.body.style.cursor = 'auto'
       }}
     >
-      <GroundedShadow radiusX={0.34} radiusZ={0.42} hovered={open} />
       <group ref={animRef}>
-        <mesh position={[0, 0.01, 0]} castShadow receiveShadow>
+        {/* renderOrder alone (no depthTest override — see below) nudges draw order among
+            opaque objects so the featured card wins ties, without breaking normal depth
+            comparisons. */}
+        <mesh position={[0, 0.01, 0]} renderOrder={open ? 1000 : 0}>
           <boxGeometry args={[0.5, 0.02, 0.62]} />
-          <meshStandardMaterial color="#fbf8ef" roughness={0.75} />
+          {/* Unlit for the same reason as the photo plane below: lit materials pick up a
+              directional light's specular highlight, which is subtle at resting size but
+              becomes a big distracting white blob once this card is billboarded to face the
+              camera and scaled up several times over. */}
+          <meshBasicMaterial color="#fbf8ef" />
         </mesh>
-        <mesh position={[0, 0.021, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0.021, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={open ? 1001 : 0}>
           <planeGeometry args={[0.5, 0.62]} />
-          <meshStandardMaterial map={photoTexture} roughness={0.45} />
+          {/* Unlit: a lit material goes dark once the card tilts up to face the camera and
+              turns away from the scene's directional lights — the print should always read
+              at a consistent brightness regardless of orientation. Slightly muted (not pure
+              white) so it doesn't look blown-out next to the rest of the lit scene.
+              depthTest deliberately left enabled: disabling it also silently disables writing
+              to the depth buffer (they're the same GL pipeline stage), which is what let
+              ContactShadows' shadow plane — rendered afterward in the transparent pass — test
+              against nothing there and draw right over this card. */}
+          <meshBasicMaterial map={photoTexture} color="#e4e0cf" />
         </mesh>
       </group>
     </group>
@@ -843,12 +866,16 @@ const PHOTO_CARDS: {
   accent: string
   photoSrc: string
 }[] = [
-  { id: 'card1', localPos: [-3.1, 0, 2.15], rotationY: -0.7, accent: '#7C8F6A', photoSrc: photoCatPlush },
-  { id: 'card2', localPos: [-2.6, 0, 1.55], rotationY: -0.42, accent: '#8CA0A1', photoSrc: photoPark1 },
-  { id: 'card3', localPos: [-2.05, 0, 2.15], rotationY: -0.14, accent: '#8F9074', photoSrc: photoPark2 },
-  { id: 'card4', localPos: [-1.45, 0, 1.55], rotationY: 0.14, accent: '#B4AE71', photoSrc: photoSelfie1 },
-  { id: 'card5', localPos: [-0.85, 0, 2.15], rotationY: 0.42, accent: '#647a52', photoSrc: photoSelfie2 },
-  { id: 'card6', localPos: [-0.25, 0, 1.55], rotationY: 0.7, accent: '#9CAE7A', photoSrc: photoCafe },
+  // One row spanning both open areas: the first 3 sit in the gap left of the cake (where
+  // they used to be), the last 3 stay in the gap between the cake and the first gift box.
+  // Modest per-card rotation keeps each footprint close to its actual size — large angles
+  // balloon it enough that even generous spacing starts crossing into the neighbor.
+  { id: 'card1', localPos: [-2.45, 0, 2], rotationY: -0.25, accent: '#7C8F6A', photoSrc: photoCatPlush },
+  { id: 'card2', localPos: [-1.5, 0, 2], rotationY: 0.15, accent: '#8CA0A1', photoSrc: photoPark1 },
+  { id: 'card3', localPos: [-0.55, 0, 2], rotationY: -0.2, accent: '#8F9074', photoSrc: photoPark2 },
+  { id: 'card4', localPos: [0.4, 0, 2], rotationY: 0.2, accent: '#B4AE71', photoSrc: photoSelfie1 },
+  { id: 'card5', localPos: [1.35, 0, 2], rotationY: -0.15, accent: '#647a52', photoSrc: photoSelfie2 },
+  { id: 'card6', localPos: [2.3, 0, 2], rotationY: 0.25, accent: '#9CAE7A', photoSrc: photoCafe },
 ]
 
 export default function CakeScene({
@@ -946,6 +973,7 @@ export default function CakeScene({
       <OrbitControls
         enablePan={false}
         enableZoom={true}
+        zoomToCursor
         minDistance={2.6}
         maxDistance={7.5}
         minPolarAngle={Math.PI * 0.22}
