@@ -961,7 +961,7 @@ export default function CakeScene({
           boxColor="#8CA0A1"
           ribbonColor="#D6D093"
           isOpen={gift1Open}
-          hint="Open this"
+          hint={openPhotoId === null ? 'Open this' : undefined}
           onClick={() => onGiftClick?.('gift1')}
         />
         <GiftBox
@@ -971,7 +971,7 @@ export default function CakeScene({
           boxColor="#8F9074"
           ribbonColor="#EDEAD9"
           isOpen={gift2Open}
-          hint="Open this"
+          hint={openPhotoId === null ? 'Open this' : undefined}
           onClick={() => onGiftClick?.('gift2')}
         />
         <Envelope
@@ -981,7 +981,7 @@ export default function CakeScene({
           paperColor="#faf3e2"
           sealColor="#c4483f"
           isOpen={envelopeOpen}
-          hint="Read this"
+          hint={openPhotoId === null ? 'Read this' : undefined}
           onClick={onEnvelopeClick}
         />
         {PHOTO_CARDS.map((card) => (
@@ -994,7 +994,7 @@ export default function CakeScene({
             accent={card.accent}
             photoSrc={card.photoSrc}
             open={openPhotoId === card.id}
-            hint={card.id === 'card1' ? 'Click this' : undefined}
+            hint={card.id === 'card1' && openPhotoId === null ? 'Click this' : undefined}
             onClick={() => onPhotoClick?.(card.id)}
           />
         ))}

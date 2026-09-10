@@ -103,7 +103,7 @@ const MODAL_CONTENT: Record<ModalId, {
 }> = {
   envelope: {
     eyebrow: 'A note for you',
-    body: 'Happy birthday, beautiful. I hope today feels easy, happy, and full of the people and little things you love most. You deserve good days, big dreams, and all the happiness coming your way. I’m really lucky to know you.',
+    body: 'Happy birthday Russel, I hope today feels easy, happy, and full of the people and little things you love most. You deserve good days, big dreams, and all the happiness coming your way. I’m really lucky to know you.',
     sign: 'Yun lang. Bani out. Hahahah.',
   },
   gift1: {
