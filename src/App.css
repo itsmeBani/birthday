@@ -16,6 +16,96 @@
   z-index: 1;
 }
 
+.scene-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--cream);
+  color: var(--matcha-600);
+  text-align: center;
+}
+
+.scene-loader-mark {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+}
+
+.scene-loader-mark span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--matcha-600);
+  animation: loader-bounce .85s ease-in-out infinite;
+}
+
+.scene-loader-mark span:nth-child(2) { animation-delay: .12s; background: var(--matcha-400); }
+.scene-loader-mark span:nth-child(3) { animation-delay: .24s; background: var(--strawberry); }
+
+.scene-loader p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+/* Floating "this is clickable" hint pinned above an unopened 3D prop (gift box, envelope,
+   photo card). A small pill with a downward tail, like a speech-bubble popover, so it reads
+   as pointing at the object beneath it. */
+.scene-callout {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  /* Fixed (not theme-variable) colors: --matcha-900 inverts to a pale tone in dark mode,
+     which washed this out to near-illegible pale-on-pale. Same dark ink as the "Happy"
+     headline text, which stays dark in both themes. */
+  background: #dde6c7;
+  color: #24330f;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+  animation: scene-callout-float 2.2s ease-in-out infinite;
+}
+
+.scene-callout::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(45deg);
+  z-index: -1;
+}
+
+@keyframes scene-callout-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-callout { animation: none; }
+}
+
+@keyframes loader-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
+}
+
 .header {
   position: absolute;
   inset: 0 0 auto 0;
@@ -343,7 +433,7 @@
   width: 100%;
   max-width: 390px;
   max-height: calc(100dvh - 32px);
-  overflow: auto;
+  overflow: visible;
   background: #fff;
   border: 1px solid rgba(30, 38, 25, 0.08);
   border-radius: 26px;
@@ -351,6 +441,53 @@
   box-shadow: 0 26px 64px rgba(0, 0, 0, 0.28);
   text-align: center;
   animation: modal-fly-in 0.65s cubic-bezier(0.22, 0.75, 0.24, 1);
+}
+
+.modal-card--letter {
+  max-width: 370px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.modal-confetti {
+  position: absolute;
+  inset: -72px -78px auto;
+  z-index: 2;
+  height: 390px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.modal-confetti span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: calc(var(--w) * 0.46);
+  border-radius: 1px;
+  background: var(--c);
+  opacity: 0;
+  animation: modal-confetti-pop 1.55s cubic-bezier(.12,.78,.25,1) var(--delay) both;
+}
+
+.modal-confetti span[data-shape='circle'] { height: var(--w); border-radius: 50%; }
+.modal-confetti span[data-shape='triangle'] {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-left: calc(var(--w) * .5) solid transparent;
+  border-right: calc(var(--w) * .5) solid transparent;
+  border-bottom: calc(var(--w) * .85) solid var(--c);
+}
+
+@keyframes modal-confetti-pop {
+  0% { opacity: 0; transform: translate(0, 0) rotate(var(--r)) scale(.2); }
+  12% { opacity: 1; transform: translate(calc(var(--dx) * .2), calc(var(--dy) * .2)) rotate(calc(var(--r) + 65deg)) scale(1); }
+  65% { opacity: .9; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) + 300deg)) scale(.92); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.08), calc(var(--dy) + 72px)) rotate(calc(var(--r) + 470deg)) scale(.68); }
 }
 
 .photo-zoom-close {
@@ -385,7 +522,7 @@
   position: sticky;
   float: right;
   top: 0;
-  z-index: 1;
+  z-index: 3;
   appearance: none;
   border: none;
   width: 32px;
@@ -405,6 +542,85 @@
 .modal-close:focus-visible {
   outline: 2px solid var(--matcha-600);
   outline-offset: 2px;
+}
+
+.birthday-letter {
+  position: relative;
+  min-height: 360px;
+  margin: 0;
+  padding: 64px 28px 30px;
+  overflow: hidden;
+  border: 1px solid #e4d7b8;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 29px, rgba(126, 101, 57, .1) 29px 30px),
+    #fffdf5;
+  box-shadow: 0 8px 20px rgba(73, 54, 22, .1);
+  color: #3e382b;
+  text-align: left;
+  transform: rotate(-1deg);
+}
+
+.birthday-letter::before {
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(174, 65, 55, .3);
+  content: '';
+  pointer-events: none;
+}
+
+.birthday-letter-stamp {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 1;
+  padding: 6px 8px;
+  border: 1px dashed #b84d45;
+  color: #a23d36;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  transform: rotate(5deg);
+}
+
+.birthday-letter-kicker {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-bottom: 8px;
+  color: #7a8760;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.birthday-letter h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 22px;
+  color: #4a6b28;
+  font-family: var(--display);
+  font-size: 36px;
+  font-style: italic;
+  line-height: 1;
+}
+
+.birthday-letter p {
+  position: relative;
+  z-index: 1;
+  max-width: 31ch;
+  font-family: var(--display);
+  font-size: 18px;
+  font-style: italic;
+  line-height: 1.65;
+}
+
+.birthday-letter .birthday-letter-sign {
+  margin-top: 22px;
+  color: #607742;
+  font-size: 17px;
 }
 
 .modal-eyebrow {
@@ -629,4 +845,76 @@
   .modal-card {
     animation: none;
   }
+
+  .modal-confetti span { animation: none; }
+  .scene-loader-mark span { animation: none; }
+}
+
+/* Compact phones: keep the greeting readable without covering the interactive scene. */
+@media (max-width: 480px) {
+  .header {
+    gap: 5px;
+    padding: calc(20px + env(safe-area-inset-top)) 18px 92px;
+  }
+
+  .eyebrow { font-size: 10px; letter-spacing: .13em; }
+  .headline { font-size: clamp(34px, 11vw, 48px); }
+  .subhead { max-width: 34ch; font-size: 14px; line-height: 1.42; }
+
+  .song-tab {
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 28px);
+    padding: 9px 14px 9px 12px;
+    font-size: 12px;
+  }
+
+  .song-tab-icon { width: 22px; height: 22px; }
+
+  .modal-backdrop {
+    align-items: center;
+    padding: 16px;
+  }
+
+  .modal-card { max-width: min(390px, calc(100vw - 32px)); }
+  .modal-card--letter { max-width: min(370px, calc(100vw - 32px)); }
+
+  .modal-confetti {
+    inset: -58px -38px auto;
+    height: 350px;
+  }
+
+  .birthday-letter { min-height: 0; padding: 56px 22px 25px; }
+  .birthday-letter h2 { margin-bottom: 17px; font-size: 32px; }
+  .birthday-letter p { font-size: 16px; line-height: 1.58; }
+  .birthday-letter .birthday-letter-sign { margin-top: 16px; font-size: 16px; }
+  .birthday-letter-stamp { top: 20px; right: 20px; }
+
+  .modal-product { min-height: 170px; margin-bottom: 14px; }
+  .modal-gift-image { max-height: 155px; }
+  .modal-body { font-size: 17px; }
+  .modal-sender-note { gap: 10px; padding: 11px; }
+  .modal-order-details { padding: 5px 12px; }
+  .modal-delivery-badge { gap: 9px; padding: 10px 11px 9px; }
+}
+
+/* Short landscape screens need a tighter modal and controls that respect the device edges. */
+@media (max-height: 620px) and (orientation: landscape) {
+  .header { padding-top: calc(12px + env(safe-area-inset-top)); }
+  .eyebrow, .subhead { display: none; }
+  .headline { font-size: clamp(30px, 5vw, 46px); }
+  .song-tab { bottom: calc(10px + env(safe-area-inset-bottom)); }
+
+  .modal-backdrop { padding: 10px; }
+  .modal-card { transform-origin: center; }
+  .modal-card:not(.modal-card--letter) { max-height: calc(100dvh - 20px); overflow-y: auto; }
+  .modal-product { min-height: 130px; margin-bottom: 10px; }
+  .modal-gift-image { max-height: 115px; }
+  .modal-body { font-size: 16px; }
+  .modal-sender-note { padding: 9px; }
+  .modal-order-details div { padding: 6px 0; }
+  .modal-delivery-badge { margin-top: 7px; padding: 8px 10px; }
+  .birthday-letter { max-height: calc(100dvh - 20px); min-height: 0; padding: 42px 22px 20px; }
+  .birthday-letter h2 { margin-bottom: 12px; font-size: 29px; }
+  .birthday-letter p { font-size: 14px; line-height: 1.45; }
+  .birthday-letter .birthday-letter-sign { margin-top: 12px; }
 }

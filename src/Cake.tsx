@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { extend, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useGLTF, ContactShadows, OrbitControls } from '@react-three/drei'
+import { useGLTF, ContactShadows, OrbitControls, Html } from '@react-three/drei'
 import { RoundedBoxGeometry } from 'three-stdlib'
 import * as THREE from 'three'
 import photoCatPlush from './assets/photo-cat-plush.png'
@@ -93,6 +93,18 @@ function GroundedShadow({
   )
 }
 
+// Floating "this is clickable" hint that hovers above an unopened prop. Rendered via drei's
+// Html (a billboarded DOM overlay pinned to a 3D point) rather than a texture, so the text
+// stays crisp at any zoom level. pointerEvents: none keeps it purely decorative — clicks pass
+// straight through to the object underneath.
+function Callout({ text, position }: { text: string; position: [number, number, number] }) {
+  return (
+    <Html position={position} center occlude={false} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>
+      <div className="scene-callout">{text}</div>
+    </Html>
+  )
+}
+
 extend({ RoundedBoxGeometry })
 
 declare module '@react-three/fiber' {
@@ -113,9 +125,10 @@ const CANDLE_TOP_Y = 1.26
 const CANDLE_ARC_START = Math.PI * 0.62
 const CANDLE_ARC_END = Math.PI * 2.38
 
-function CakeModel() {
+function CakeModel({ onReady }: { onReady?: () => void }) {
   const { scene } = useGLTF(CAKE_URL)
   const model = useMemo(() => scene.clone(true), [scene])
+  useEffect(() => onReady?.(), [onReady])
   return <primitive object={model} />
 }
 
@@ -283,6 +296,10 @@ function getPhotoCardTexture(accent: string, photo: HTMLImageElement | null): TH
     const dw = photo.width * coverScale
     const dh = photo.height * coverScale
     ctx.drawImage(photo, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh)
+    // Lift the shadows slightly so the printed picture stays readable against the scene's
+    // dimmed backdrop, especially on mobile displays with lower brightness.
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'
+    ctx.fillRect(px, py, pw, ph)
     ctx.restore()
   } else {
     const photoGrad = ctx.createLinearGradient(px, py, px, py + ph)
@@ -375,6 +392,7 @@ function GiftBox({
   boxColor,
   ribbonColor,
   isOpen = false,
+  hint,
   onClick,
 }: {
   position: [number, number, number]
@@ -383,6 +401,7 @@ function GiftBox({
   boxColor: string
   ribbonColor: string
   isOpen?: boolean
+  hint?: string
   onClick?: () => void
 }) {
   const lidRef = useRef<THREE.Group>(null)
@@ -449,6 +468,7 @@ function GiftBox({
     >
       <GroundedShadow radiusX={0.36} hovered={hovered} />
       <group ref={bobRef}>
+      {hint && !isOpen && <Callout text={hint} position={[0, 0.95, 0]} />}
       <mesh position={[0, 0.275, 0]} castShadow receiveShadow>
         <roundedBoxGeometry args={[0.62, 0.55, 0.62, 2, 0.02]} />
         {bodyFaces.map((color, i) =>
@@ -540,7 +560,7 @@ function Envelope({
   paperColor,
   sealColor,
   isOpen = false,
-
+  hint,
 
   onClick,
 }: {
@@ -550,6 +570,7 @@ function Envelope({
   paperColor: string
   sealColor: string
   isOpen?: boolean
+  hint?: string
   onClick?: () => void
 }) {
   const t = 0.035
@@ -610,6 +631,7 @@ function Envelope({
     >
       <GroundedShadow radiusX={0.44} radiusZ={0.34} hovered={hovered} />
       <group ref={bobRef}>
+      {hint && !isOpen && <Callout text={hint} position={[0, 0.55, 0]} />}
       <mesh position={[0, t / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.9, t, 0.62]} />
         <meshStandardMaterial color={paperColor} roughness={0.75} />
@@ -688,24 +710,28 @@ function  PhotoCard({
   position,
   rotationY = 0,
   scale = 1,
+  sceneScale = 1,
   accent,
   photoSrc,
   open,
+  hint,
   onClick,
 }: {
   position: [number, number, number]
   rotationY?: number
   scale?: number
+  sceneScale?: number
   accent: string
   photoSrc?: string
   open: boolean
+  hint?: string
   onClick?: () => void
 }) {
   const layerRef = useAssignLayer(PROP_LAYER)
   const animRef = useRef<THREE.Group>(null)
   const photoImg = useLoadedImage(photoSrc)
   const photoTexture = useMemo(() => getPhotoCardTexture(accent, photoImg), [accent, photoImg])
-  const { camera } = useThree()
+  const { camera, size } = useThree()
   const closedQuat = useMemo(() => new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rotationY, 0)), [rotationY])
 
   // The outer group stays put at the card's resting spot on the table (so its shadow never
@@ -718,25 +744,23 @@ function  PhotoCard({
     if (open) {
       camera.getWorldDirection(_camForward)
       const featuredDistance = camera.position.distanceTo(PHOTO_ORBIT_TARGET) * PHOTO_FEATURED_DISTANCE_FACTOR
-      const outerWorldX = position[0]
-      const outerWorldY = position[1] + PHOTO_CARD_GROUP_Y
-      const outerWorldZ = position[2]
+      const sceneParentY = PHOTO_CARD_GROUP_Y
       // This inner group's position is local to the outer group, which is itself scaled by
       // `scale` — so a desired *world*-space offset has to be divided by that scale first,
       // or it lands `scale`x farther from the target than intended.
       g.position.x = THREE.MathUtils.lerp(
         g.position.x,
-        (camera.position.x + _camForward.x * featuredDistance - outerWorldX) / scale,
+        ((camera.position.x + _camForward.x * featuredDistance) / sceneScale - position[0]) / scale,
         0.2,
       )
       g.position.y = THREE.MathUtils.lerp(
         g.position.y,
-        (camera.position.y + _camForward.y * featuredDistance - outerWorldY) / scale,
+        ((camera.position.y + _camForward.y * featuredDistance - sceneParentY) / sceneScale - position[1]) / scale,
         0.2,
       )
       g.position.z = THREE.MathUtils.lerp(
         g.position.z,
-        (camera.position.z + _camForward.z * featuredDistance - outerWorldZ) / scale,
+        ((camera.position.z + _camForward.z * featuredDistance) / sceneScale - position[2]) / scale,
         0.2,
       )
       // Snapped, not slerped: it should always exactly match the live camera with zero lag
@@ -746,7 +770,11 @@ function  PhotoCard({
       g.quaternion.copy(_billboardQuat)
       const fovRad = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov)
       const frustumHeightAtCard = 2 * featuredDistance * Math.tan(fovRad / 2)
-      const targetScale = (frustumHeightAtCard * PHOTO_FEATURED_FILL_FRACTION) / (PHOTO_CARD_BASE_HEIGHT * scale)
+      // Portrait phones and short browser windows do not have enough vertical room for the
+      // desktop-sized featured card. Cap its screen fill there so it stays centered instead
+      // of extending under the headline or beyond the viewport.
+      const photoFill = size.height < 560 ? 0.42 : PHOTO_FEATURED_FILL_FRACTION
+      const targetScale = (frustumHeightAtCard * photoFill) / (PHOTO_CARD_BASE_HEIGHT * scale * sceneScale)
       g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, targetScale, 0.2))
     } else {
       g.position.x = THREE.MathUtils.lerp(g.position.x, 0, 0.12)
@@ -776,6 +804,7 @@ function  PhotoCard({
         document.body.style.cursor = 'auto'
       }}
     >
+      {hint && !open && <Callout text={hint} position={[0, 0.5, 0]} />}
       <group ref={animRef}>
         {/* renderOrder alone (no depthTest override — see below) nudges draw order among
             opaque objects so the featured card wins ties, without breaking normal depth
@@ -798,7 +827,7 @@ function  PhotoCard({
               to the depth buffer (they're the same GL pipeline stage), which is what let
               ContactShadows' shadow plane — rendered afterward in the transparent pass — test
               against nothing there and draw right over this card. */}
-          <meshBasicMaterial map={photoTexture} color="#e4e0cf" />
+          <meshBasicMaterial map={photoTexture} color="#ffffff" />
         </mesh>
       </group>
     </group>
@@ -829,7 +858,7 @@ function PhotoBackdrop({ open, onClick }: { open: boolean; onClick?: () => void 
     g.quaternion.copy(camera.quaternion)
     // Matches .modal-backdrop's rgba(20,26,12,0.4) tint so the two "put everything else on
     // hold" treatments read as the same design language.
-    m.opacity = THREE.MathUtils.lerp(m.opacity, open ? 0.4 : 0, 0.15)
+    m.opacity = THREE.MathUtils.lerp(m.opacity, open ? 0.24 : 0, 0.15)
   })
 
   return (
@@ -888,6 +917,7 @@ export default function CakeScene({
   onGiftClick,
   onPhotoClick,
   onPhotoClose,
+  onModelReady,
 }: {
   candlesLit: boolean
   envelopeOpen?: boolean
@@ -898,7 +928,13 @@ export default function CakeScene({
   onGiftClick?: (id: 'gift1' | 'gift2') => void
   onPhotoClick?: (id: string) => void
   onPhotoClose?: () => void
+  onModelReady?: () => void
 }) {
+  // The props span more than five world units from envelope to gift. On a portrait phone the
+  // visible world width is much smaller than on desktop, so scale the *whole* arrangement
+  // together to keep every interactive object reachable and preserve their spacing.
+  const viewportWidth = useThree((state) => state.viewport.width)
+  const sceneScale = THREE.MathUtils.clamp(viewportWidth / 6.35, 0.58, 1)
 
   return (
     <>
@@ -913,9 +949,9 @@ export default function CakeScene({
       />
       <directionalLight position={[-4, 2, -3]} intensity={0.35} color="#bcd8a0" />
 
-      <group position={[0, -0.65, 0]}>
+      <group position={[0, -0.65, 0]} scale={sceneScale}>
         <Turntable>
-          <CakeModel />
+          <CakeModel onReady={onModelReady} />
           <CandleRing lit={candlesLit} />
         </Turntable>
         <GiftBox
@@ -925,6 +961,7 @@ export default function CakeScene({
           boxColor="#8CA0A1"
           ribbonColor="#D6D093"
           isOpen={gift1Open}
+          hint="Open this"
           onClick={() => onGiftClick?.('gift1')}
         />
         <GiftBox
@@ -934,6 +971,7 @@ export default function CakeScene({
           boxColor="#8F9074"
           ribbonColor="#EDEAD9"
           isOpen={gift2Open}
+          hint="Open this"
           onClick={() => onGiftClick?.('gift2')}
         />
         <Envelope
@@ -943,6 +981,7 @@ export default function CakeScene({
           paperColor="#faf3e2"
           sealColor="#c4483f"
           isOpen={envelopeOpen}
+          hint="Read this"
           onClick={onEnvelopeClick}
         />
         {PHOTO_CARDS.map((card) => (
@@ -951,9 +990,11 @@ export default function CakeScene({
             position={card.localPos}
             rotationY={card.rotationY}
             scale={1.3}
+            sceneScale={sceneScale}
             accent={card.accent}
             photoSrc={card.photoSrc}
             open={openPhotoId === card.id}
+            hint={card.id === 'card1' ? 'Click this' : undefined}
             onClick={() => onPhotoClick?.(card.id)}
           />
         ))}
@@ -972,7 +1013,7 @@ export default function CakeScene({
 
       <OrbitControls
         enablePan={false}
-        enableZoom={true}
+        enableZoom={false}
         zoomToCursor
         minDistance={2.6}
         maxDistance={7.5}

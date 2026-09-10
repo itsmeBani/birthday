@@ -4,21 +4,30 @@ import CakeScene from './Cake.tsx'
 import { playHappyBirthday, type SongPlayback } from './happyBirthdaySong.ts'
 import giftJersey from './assets/1789050427380.jpg'
 import giftJacket from './assets/1789050442492.jpg'
+import photoCatPlush from './assets/photo-cat-plush.png'
+import photoPark1 from './assets/photo-park-1.jpg'
+import photoPark2 from './assets/photo-park-2.jpg'
+import photoSelfie1 from './assets/photo-selfie-1.jpg'
+import photoSelfie2 from './assets/photo-selfie-2.jpg'
+import photoCafe from './assets/photo-cafe.jpg'
 import './App.css'
+
+const SCENE_IMAGE_URLS = [photoCatPlush, photoPark1, photoPark2, photoSelfie1, photoSelfie2, photoCafe]
 
 interface ConfettiPiece {
   id: number
-  x: number
   w: number
   c: string
-  dur: number
   delay: number
-  spin: string
+  rotation: number
   shape: 'rect' | 'circle' | 'triangle'
 }
 
-interface BurstPiece extends Omit<ConfettiPiece, 'x'> {
-  tx: string
+interface ModalConfettiPiece extends ConfettiPiece {
+  x: number
+  y: number
+  dx: number
+  dy: number
 }
 
 const CONFETTI_COLORS = [
@@ -28,7 +37,39 @@ const CONFETTI_COLORS = [
 
 const CONFETTI_SHAPES: ConfettiPiece['shape'][] = ['rect', 'rect', 'circle', 'triangle']
 
-function makeConfetti(batch: number): ConfettiPiece[] {
+function makeModalConfetti(batch: number): ModalConfettiPiece[] {
+  return Array.from({ length: 96 }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2
+    const distance = 58 + Math.random() * 130
+    return {
+      id: batch * 1000 + i,
+      // A tight cluster at the center makes the animation read as an explosion,
+      // rather than individual pieces simply drifting down from the top.
+      x: 38 + Math.random() * 24,
+      y: 30 + Math.random() * 25,
+      dx: Math.cos(angle) * distance,
+      dy: Math.sin(angle) * distance * 0.72,
+      w: 4 + Math.random() * 9,
+      c: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      delay: Math.random() * 0.2,
+      rotation: Math.round(Math.random() * 180),
+      shape: CONFETTI_SHAPES[Math.floor(Math.random() * CONFETTI_SHAPES.length)],
+    }
+  })
+}
+
+interface PageConfettiPiece {
+  id: number
+  x: number
+  w: number
+  c: string
+  dur: number
+  delay: number
+  spin: string
+  shape: ConfettiPiece['shape']
+}
+
+function makePageConfetti(batch: number): PageConfettiPiece[] {
   return Array.from({ length: 220 }, (_, i) => ({
     id: batch * 10000 + i,
     x: Math.random() * 100,
@@ -36,19 +77,6 @@ function makeConfetti(batch: number): ConfettiPiece[] {
     c: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
     dur: 2 + Math.random() * 1.8,
     delay: Math.random() * 0.6,
-    spin: `${Math.round(360 + Math.random() * 540)}deg`,
-    shape: CONFETTI_SHAPES[Math.floor(Math.random() * CONFETTI_SHAPES.length)],
-  }))
-}
-
-function makeBurst(batch: number): BurstPiece[] {
-  return Array.from({ length: 42 }, (_, i) => ({
-    id: batch * 10000 + i,
-    tx: `${Math.round(-18 + Math.random() * 36)}vw`,
-    w: 5 + Math.random() * 8,
-    c: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-    dur: 1.2 + Math.random() * 0.8,
-    delay: Math.random() * 0.12,
     spin: `${Math.round(360 + Math.random() * 540)}deg`,
     shape: CONFETTI_SHAPES[Math.floor(Math.random() * CONFETTI_SHAPES.length)],
   }))
@@ -75,19 +103,19 @@ const MODAL_CONTENT: Record<ModalId, {
 }> = {
   envelope: {
     eyebrow: 'A note for you',
-    body: 'Dear Russel, happy 24th birthday. Here’s to more matcha, more cake, and every good thing this year has waiting for you.',
-    sign: 'With love, always.',
+    body: 'Happy birthday, beautiful. I hope today feels easy, happy, and full of the people and little things you love most. You deserve good days, big dreams, and all the happiness coming your way. I’m really lucky to know you.',
+    sign: 'Yun lang. Bani out. Hahahah.',
   },
   gift1: {
     eyebrow: 'You opened it',
     image: giftJersey,
-    body: 'A GMMTV jersey, picked just for her.',
+    body: 'A GMMTV jersey',
     sign: 'Worth the wait.',
     deliveryDate: 'September 18',
     giftDetails: {
       sender: 'Bani F.',
       senderInitials: 'BF',
-      note: 'HAAHAHHAHA',
+      note: 'Gift ko HAAHAHHAHA',
       recipient: 'Aston · 17',
       size: 'Medium',
       order: 'GM-48210',
@@ -102,7 +130,7 @@ const MODAL_CONTENT: Record<ModalId, {
     giftDetails: {
       sender: 'Bani F.',
       senderInitials: 'BF',
-      note: 'HAAHAHHAHA',
+      note: 'Gift ko HAAHAHHAHA',
       recipient: 'Jacket',
       size: 'Large',
       order: 'GM-48211',
@@ -143,8 +171,8 @@ const MODAL_ORIGIN: Record<ModalId, { x: string; y: string }> = {
 
 function App() {
   const candlesLit = true
-  const [wishBatch, setWishBatch] = useState(0)
-  const confetti = useMemo(() => makeConfetti(wishBatch), [wishBatch])
+  const [modelReady, setModelReady] = useState(false)
+  const [sceneImagesReady, setSceneImagesReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const playbackRef = useRef<SongPlayback | null>(null)
   const [modal, setModal] = useState<ModalId | null>(null)
@@ -152,9 +180,33 @@ function App() {
   const [gift1Open, setGift1Open] = useState(false)
   const [gift2Open, setGift2Open] = useState(false)
   const [openPhotoId, setOpenPhotoId] = useState<string | null>(null)
-  const [burst, setBurst] = useState<{ batch: number; x: string; y: string } | null>(null)
-  const burstPieces = useMemo(() => (burst ? makeBurst(burst.batch) : []), [burst])
-  const triggerBurst = (x: string, y: string) => setBurst((prev) => ({ batch: (prev?.batch ?? 0) + 1, x, y }))
+  const [giftModalBatch, setGiftModalBatch] = useState(0)
+  const modalConfetti = useMemo(() => (modal?.startsWith('gift') ? makeModalConfetti(giftModalBatch) : []), [modal, giftModalBatch])
+  const [pageConfettiBatch, setPageConfettiBatch] = useState(0)
+  const pageConfetti = useMemo(() => makePageConfetti(pageConfettiBatch), [pageConfettiBatch])
+
+  useEffect(() => {
+    let cancelled = false
+    const preload = (src: string) => new Promise<void>((resolve) => {
+      const image = new Image()
+      image.onload = () => resolve()
+      image.onerror = () => resolve() // Never leave the experience behind a loader for one missing image.
+      image.src = src
+      if (image.complete) resolve()
+    })
+    Promise.all(SCENE_IMAGE_URLS.map(preload)).then(() => {
+      if (!cancelled) setSceneImagesReady(true)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const sceneReady = modelReady && sceneImagesReady
+
+  // Greet with a burst once the scene has actually finished loading, rather than on a blind
+  // timer — firing while the loader overlay still covers the screen would waste the moment.
+  useEffect(() => {
+    if (sceneReady) setPageConfettiBatch((b) => b + 1)
+  }, [sceneReady])
 
   const OPEN_SETTERS: Record<ModalId, (v: boolean) => void> = {
     envelope: setEnvelopeOpen,
@@ -173,12 +225,9 @@ function App() {
       return
     }
     OPEN_SETTERS[id](true)
-    // Fires alongside the modal itself (after the 3D lid-opening animation), not at the
-    // moment of the click — otherwise the burst plays out and fades before the modal with
-    // the gift even appears.
     window.setTimeout(() => {
+      if (id.startsWith('gift')) setGiftModalBatch((batch) => batch + 1)
       setModal(id)
-      triggerBurst(MODAL_ORIGIN[id].x, MODAL_ORIGIN[id].y)
     }, 550)
   }
 
@@ -188,19 +237,11 @@ function App() {
   }
 
   useEffect(() => {
-    const t = setTimeout(() => setWishBatch((b) => b + 1), 500)
-    return () => clearTimeout(t)
-  }, [])
-
-  useEffect(() => {
     return () => playbackRef.current?.stop()
   }, [])
 
   const togglePhotoCard = (id: string) => {
     setOpenPhotoId((cur) => {
-      // Same reasoning as the gift modal: wait for the card to have mostly settled into its
-      // centered spot before bursting, instead of firing at the very start of its flight.
-      if (cur !== id) window.setTimeout(() => triggerBurst('50vw', '40vh'), 300)
       return cur === id ? null : id
     })
   }
@@ -247,9 +288,17 @@ function App() {
             onGiftClick={handleObjectClick}
             onPhotoClick={togglePhotoCard}
             onPhotoClose={() => setOpenPhotoId(null)}
+            onModelReady={() => setModelReady(true)}
           />
         </Suspense>
       </Canvas>
+
+      {!sceneReady && (
+        <div className="scene-loader" role="status" aria-live="polite" aria-label="Loading birthday surprise">
+          <div className="scene-loader-mark" aria-hidden="true"><span /><span /><span /></div>
+          <p>Preparing your birthday surprise</p>
+        </div>
+      )}
 
       <header className="header">
         <span className="eyebrow">Today&rsquo;s special</span>
@@ -261,9 +310,9 @@ function App() {
         </p>
       </header>
 
-      {wishBatch > 0 && (
-        <div className="confetti-layer" aria-hidden="true">
-          {confetti.map((p) => (
+      {pageConfettiBatch > 0 && (
+        <div className="confetti-layer" aria-hidden="true" key={pageConfettiBatch}>
+          {pageConfetti.map((p) => (
             <span
               key={p.id}
               className="confetto"
@@ -271,33 +320,6 @@ function App() {
               style={
                 {
                   '--x': `${p.x}%`,
-                  '--w': `${p.w}px`,
-                  '--c': p.c,
-                  '--dur': `${p.dur}s`,
-                  '--delay': `${p.delay}s`,
-                  '--spin': p.spin,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      {burst && (
-        <div
-          className="confetti-burst"
-          aria-hidden="true"
-          key={burst.batch}
-          style={{ '--bx': burst.x, '--by': burst.y } as CSSProperties}
-        >
-          {burstPieces.map((p) => (
-            <span
-              key={p.id}
-              className="confetto-burst"
-              data-shape={p.shape}
-              style={
-                {
-                  '--tx': p.tx,
                   '--w': `${p.w}px`,
                   '--c': p.c,
                   '--dur': `${p.dur}s`,
@@ -346,10 +368,10 @@ function App() {
       {modal && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div
-            className="modal-card"
+            className={`modal-card ${modal === 'envelope' ? 'modal-card--letter' : ''}`}
             role="dialog"
             aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
+            onClick={modal === 'envelope' ? closeModal : (e) => e.stopPropagation()}
             style={
               {
                 '--ox': MODAL_ORIGIN[modal].x,
@@ -357,59 +379,56 @@ function App() {
               } as CSSProperties
             }
           >
-            <button
-              type="button"
-              className="modal-close"
-              onClick={closeModal}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            {MODAL_CONTENT[modal].image ? (
-              <span className="modal-eyebrow-chip">
-                <GiftIcon />
-                {MODAL_CONTENT[modal].eyebrow}
-              </span>
-            ) : (
-              <span className="modal-eyebrow">{MODAL_CONTENT[modal].eyebrow}</span>
-            )}
-            {MODAL_CONTENT[modal].image && (
-              <div className="modal-product">
-                <img className="modal-gift-image" src={MODAL_CONTENT[modal].image} alt="" />
+            {modalConfetti.length > 0 && (
+              <div className="modal-confetti" aria-hidden="true" key={modal}>
+                {modalConfetti.map((piece) => (
+                  <span
+                    key={piece.id}
+                    data-shape={piece.shape}
+                    style={{
+                      '--x': `${piece.x}%`,
+                      '--y': `${piece.y}%`,
+                      '--dx': `${piece.dx}px`,
+                      '--dy': `${piece.dy}px`,
+                      '--w': `${piece.w}px`,
+                      '--c': piece.c,
+                      '--delay': `${piece.delay}s`,
+                      '--r': `${piece.rotation}deg`,
+                    } as CSSProperties}
+                  />
+                ))}
               </div>
             )}
-            <p className="modal-body">{MODAL_CONTENT[modal].body}</p>
-            {MODAL_CONTENT[modal].giftDetails && (
+            {modal !== 'envelope' && <button type="button" className="modal-close" onClick={closeModal} aria-label="Close">×</button>}
+            {modal === 'envelope' ? (
+              <article className="birthday-letter">
+                <span className="birthday-letter-stamp">For Russel</span>
+                <span className="birthday-letter-kicker">A birthday letter</span>
+                <h2>Happy birthday!</h2>
+                <p>{MODAL_CONTENT.envelope.body}</p>
+                <p className="birthday-letter-sign">{MODAL_CONTENT.envelope.sign}</p>
+              </article>
+            ) : (
               <>
+                <span className="modal-eyebrow-chip"><GiftIcon />{MODAL_CONTENT[modal].eyebrow}</span>
+                <div className="modal-product"><img className="modal-gift-image" src={MODAL_CONTENT[modal].image} alt="" /></div>
+                <p className="modal-body">{MODAL_CONTENT[modal].body}</p>
                 <div className="modal-sender-note">
-                  <span className="modal-avatar">{MODAL_CONTENT[modal].giftDetails.senderInitials}</span>
-                  <p>
-                    <small>From {MODAL_CONTENT[modal].giftDetails.sender}</small>
-                    {MODAL_CONTENT[modal].giftDetails.note}
-                  </p>
+                  <span className="modal-avatar">{MODAL_CONTENT[modal].giftDetails!.senderInitials}</span>
+                  <p><small>From {MODAL_CONTENT[modal].giftDetails!.sender}</small>{MODAL_CONTENT[modal].giftDetails!.note}</p>
                 </div>
                 <dl className="modal-order-details">
-                  <div><dt>Name and number</dt><dd>{MODAL_CONTENT[modal].giftDetails.recipient}</dd></div>
-                  <div><dt>Size</dt><dd>{MODAL_CONTENT[modal].giftDetails.size}</dd></div>
-                 </dl>
+                  <div><dt>Name and number</dt><dd>{MODAL_CONTENT[modal].giftDetails!.recipient}</dd></div>
+                  <div><dt>Size</dt><dd>{MODAL_CONTENT[modal].giftDetails!.size}</dd></div>
+                </dl>
+                <div className="modal-delivery-badge">
+                  <span className="modal-delivery-icon" aria-hidden="true"><TruckIcon /></span>
+                  <span className="modal-delivery-text"><strong>Estimated delivery</strong><b>{MODAL_CONTENT[modal].deliveryDate}</b></span>
+                  <div className="modal-delivery-progress" aria-label="Packed and shipped; delivery pending"><span /><span /><span /></div>
+                  <div className="modal-delivery-steps" aria-hidden="true"><span>Packed</span><span>Shipped</span><span>Delivered</span></div>
+                </div>
               </>
             )}
-            {MODAL_CONTENT[modal].deliveryDate && (
-              <div className="modal-delivery-badge">
-                <span className="modal-delivery-icon" aria-hidden="true">
-                  <TruckIcon />
-                </span>
-                <span className="modal-delivery-text">
-                  <strong>Estimated delivery</strong>
-                  <b>{MODAL_CONTENT[modal].deliveryDate}</b>
-                </span>
-                <div className="modal-delivery-progress" aria-label="Packed and shipped; delivery pending">
-                  <span /><span /><span />
-                </div>
-                <div className="modal-delivery-steps" aria-hidden="true"><span>Packed</span><span>Shipped</span><span>Delivered</span></div>
-              </div>
-            )}
-            {!MODAL_CONTENT[modal].giftDetails && <p className="modal-sign">{MODAL_CONTENT[modal].sign}</p>}
           </div>
         </div>
       )}
