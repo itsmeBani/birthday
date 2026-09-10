@@ -169,7 +169,25 @@ const MODAL_ORIGIN: Record<ModalId, { x: string; y: string }> = {
   gift2: { x: '87vw', y: '73vh' },
 }
 
+// Matches the CSS "compact phone" breakpoint in App.css so the 3D camera and the 2D layout
+// switch at the same viewport width.
+const PHONE_BREAKPOINT = '(max-width: 480px)'
+const DESKTOP_CAMERA = { position: [0, 4.7, 4.95] as [number, number, number], fov: 60 }
+const PHONE_CAMERA = { position: [-5, 4.1, 4.95] as [number, number, number], fov: 60 }
+
+function useIsPhone() {
+  const [isPhone, setIsPhone] = useState(() => window.matchMedia(PHONE_BREAKPOINT).matches)
+  useEffect(() => {
+    const mql = window.matchMedia(PHONE_BREAKPOINT)
+    const onChange = (e: MediaQueryListEvent) => setIsPhone(e.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [])
+  return isPhone
+}
+
 function App() {
+  const isPhone = useIsPhone()
   const candlesLit = true
   const [modelReady, setModelReady] = useState(false)
   const [sceneImagesReady, setSceneImagesReady] = useState(false)
@@ -272,8 +290,9 @@ function App() {
   return (
     <div className="stage" data-photo-open={openPhotoId ? 'true' : undefined}>
       <Canvas
+        key={isPhone ? 'phone' : 'desktop'}
         shadows
-        camera={{ position: [0, 4.7, 4.95], fov: 60  }}
+        camera={isPhone ? PHONE_CAMERA : DESKTOP_CAMERA}
         gl={{ alpha: true, antialias: true }}
         dpr={[1, 2]}
       >
