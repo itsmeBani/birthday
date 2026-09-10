@@ -1,0 +1,171 @@
+:root {
+  --cream: #f3f6ea;
+  --paper: #e8efd8;
+  --ink: #26350f;
+  --ink-soft: #55643f;
+  --matcha-100: #e3ecc4;
+  --matcha-400: #8ba454;
+  --matcha-600: #5c7a34;
+  --matcha-900: #24330f;
+  --strawberry: #c4483f;
+  --strawberry-bg: rgba(196, 72, 63, 0.12);
+  --line: rgba(38, 53, 15, 0.14);
+  --scrim: linear-gradient(
+    180deg,
+    rgba(243, 246, 234, 0.95) 0%,
+    rgba(243, 246, 234, 0.95) 65%,
+    rgba(243, 246, 234, 0.9) 70%,
+    rgba(243, 246, 234, 0.76) 75%,
+    rgba(243, 246, 234, 0.58) 80%,
+    rgba(243, 246, 234, 0.37) 85%,
+    rgba(243, 246, 234, 0.19) 90%,
+    rgba(243, 246, 234, 0.05) 95%,
+    rgba(243, 246, 234, 0) 100%
+  );
+  --shadow: 0 20px 40px -20px rgba(36, 51, 15, 0.35);
+
+  --display: 'Fraunces', 'Iowan Old Style', serif;
+  --sans: 'Sora', system-ui, 'Segoe UI', sans-serif;
+
+  color-scheme: light dark;
+  color: var(--ink);
+  background: var(--cream);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream: #c9d6ae;
+    --paper: #dbe6c4;
+    --ink: #24350f;
+    --ink-soft: #3f5a24;
+    --matcha-100: #2c451a;
+    --matcha-400: #9dbf68;
+    --matcha-600: #4a6b28;
+    --matcha-900: #e9f0d8;
+    --strawberry: #e2857c;
+    --strawberry-bg: rgba(226, 133, 124, 0.16);
+    --line: rgba(237, 241, 222, 0.16);
+    --scrim: linear-gradient(
+      180deg,
+      rgba(201, 214, 174, 0.92) 0%,
+      rgba(201, 214, 174, 0.92) 40%,
+      rgba(201, 214, 174, 0.86) 50%,
+      rgba(201, 214, 174, 0.78) 55%,
+      rgba(201, 214, 174, 0.68) 60%,
+      rgba(201, 214, 174, 0.56) 65%,
+      rgba(201, 214, 174, 0.44) 70%,
+      rgba(201, 214, 174, 0.33) 75%,
+      rgba(201, 214, 174, 0.22) 80%,
+      rgba(201, 214, 174, 0.13) 85%,
+      rgba(201, 214, 174, 0.06) 90%,
+      rgba(201, 214, 174, 0.02) 95%,
+      rgba(201, 214, 174, 0) 100%
+    );
+    --shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme='dark'] {
+  --cream: #c9d6ae;
+  --paper: #dbe6c4;
+  --ink: #24350f;
+  --ink-soft: #3f5a24;
+  --matcha-100: #2c451a;
+  --matcha-400: #9dbf68;
+  --matcha-600: #4a6b28;
+  --matcha-900: #e9f0d8;
+  --strawberry: #e2857c;
+  --strawberry-bg: rgba(226, 133, 124, 0.16);
+  --line: rgba(237, 241, 222, 0.16);
+  --scrim: linear-gradient(
+    180deg,
+    rgba(201, 214, 174, 0.92) 0%,
+    rgba(201, 214, 174, 0.92) 40%,
+    rgba(201, 214, 174, 0.86) 50%,
+    rgba(201, 214, 174, 0.78) 55%,
+    rgba(201, 214, 174, 0.68) 60%,
+    rgba(201, 214, 174, 0.56) 65%,
+    rgba(201, 214, 174, 0.44) 70%,
+    rgba(201, 214, 174, 0.33) 75%,
+    rgba(201, 214, 174, 0.22) 80%,
+    rgba(201, 214, 174, 0.13) 85%,
+    rgba(201, 214, 174, 0.06) 90%,
+    rgba(201, 214, 174, 0.02) 95%,
+    rgba(201, 214, 174, 0) 100%
+  );
+  --shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme='light'] {
+  --cream: #f3f6ea;
+  --paper: #e8efd8;
+  --ink: #26350f;
+  --ink-soft: #55643f;
+  --matcha-100: #e3ecc4;
+  --matcha-400: #8ba454;
+  --matcha-600: #5c7a34;
+  --matcha-900: #24330f;
+  --strawberry: #c4483f;
+  --strawberry-bg: rgba(196, 72, 63, 0.12);
+  --line: rgba(38, 53, 15, 0.14);
+  --scrim: linear-gradient(
+    180deg,
+    rgba(243, 246, 234, 0.95) 0%,
+    rgba(243, 246, 234, 0.95) 65%,
+    rgba(243, 246, 234, 0.9) 70%,
+    rgba(243, 246, 234, 0.76) 75%,
+    rgba(243, 246, 234, 0.58) 80%,
+    rgba(243, 246, 234, 0.37) 85%,
+    rgba(243, 246, 234, 0.19) 90%,
+    rgba(243, 246, 234, 0.05) 95%,
+    rgba(243, 246, 234, 0) 100%
+  );
+  --shadow: 0 20px 40px -20px rgba(36, 51, 15, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--cream);
+  color: var(--ink);
+}
+
+h1,
+h2 {
+  font-family: var(--display);
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: var(--sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

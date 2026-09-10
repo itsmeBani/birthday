@@ -1,0 +1,9 @@
+Matcha cake
+-----------
+Recolored derivative of "Strawberry cake"
+(https://sketchfab.com/3d-models/strawberry-cake-79762ddaa1c047f595243c1f68a66bd7)
+by Polybyheart (https://sketchfab.com/Polybyheart),
+licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/).
+
+Only the base color textures and material base color factors were changed;
+geometry, UVs and scene graph are untouched. Credit must stay with the model.
