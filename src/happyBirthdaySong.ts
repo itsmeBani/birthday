@@ -30,7 +30,7 @@ export interface SongPlayback {
 export function playHappyBirthday(onEnd?: () => void): SongPlayback {
   const ctx = new AudioContext()
   const master = ctx.createGain()
-  master.gain.value = 0.2
+  master.gain.value = 0.85
   master.connect(ctx.destination)
 
   let t = ctx.currentTime + 0.05
